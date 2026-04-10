@@ -5,7 +5,6 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, Dataset
 from torchvision import transforms
 from torchvision.datasets import OxfordIIITPet
-from PIL import Image
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -85,7 +84,7 @@ class PetSegDataset(Dataset):
             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
         ])
         self.mask_transform = transforms.Compose([
-            transforms.Resize((128, 128), interpolation=Image.NEAREST),
+            transforms.Resize((128, 128), interpolation=transforms.InterpolationMode.NEAREST),
             transforms.ToTensor()
         ])
     
@@ -96,7 +95,7 @@ class PetSegDataset(Dataset):
         image, mask = self.dataset[idx]
         image = self.img_transform(image)
         mask = self.mask_transform(mask)
-        mask = (mask * 255).long().squeeze(0) - 1 # shifts 1,2,3 -> 0,1,2
+        mask = (mask * 255).round().long().squeeze(0) - 1 # shifts 1,2,3 -> 0,1,2
         return image, mask
 
 # evaluation function
@@ -125,12 +124,13 @@ if __name__ == "__main__":
     train_set = PetSegDataset(train_data)
     test_set = PetSegDataset(test_data)
     # dataloader
-    train_loader = DataLoader(train_set, batch_size=16, shuffle=True)
-    test_loader = DataLoader(test_set, batch_size=16)
+    train_loader = DataLoader(train_set, batch_size=16, shuffle=True, num_workers=4, pin_memory=True)
+    test_loader = DataLoader(test_set,  batch_size=16,               num_workers=4, pin_memory=True)
 
     model = UNet(num_classes=3).to(device)
     loss_fn = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
 
     # training loop
     for epoch in range(25):
@@ -149,6 +149,7 @@ if __name__ == "__main__":
             optimizer.step()
             total_loss += loss.item()
 
+        scheduler.step()
         print(f"Epoch {epoch + 1}/25, loss = {total_loss / len(train_loader):.4f}")
     
     # save to memory
