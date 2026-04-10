@@ -154,15 +154,3 @@ if __name__ == "__main__":
     # evaluate
     miou = evaluate(model, test_loader)
     print(f"mIoU: {miou:.4f}")
-    
-    
-
-            
-
-
-
-
-
-
-
-        
