@@ -2,7 +2,7 @@
 
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader, Dataset, random_split
 from torchvision import transforms
 from torchvision.datasets import OxfordIIITPet
 
@@ -76,12 +76,11 @@ class UNet(nn.Module):
 # segmentation dataset
 class PetSegDataset(Dataset):
     def __init__(self, dataset):
-        super().__init__()
         self.dataset = dataset
         self.img_transform = transforms.Compose([
             transforms.Resize((128, 128)),
             transforms.ToTensor(),
-            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+            transforms.Normalize((0.485, 0.456, 0.406), (0.229, 0.224, 0.225))
         ])
         self.mask_transform = transforms.Compose([
             transforms.Resize((128, 128), interpolation=transforms.InterpolationMode.NEAREST),
@@ -121,11 +120,19 @@ if __name__ == "__main__":
     train_data = OxfordIIITPet(root="./data", split="trainval", target_types="segmentation", download=True)
     test_data = OxfordIIITPet(root="./data", split="test", target_types="segmentation", download=True)
     # dataset
-    train_set = PetSegDataset(train_data)
+    full_train_set = PetSegDataset(train_data)
     test_set = PetSegDataset(test_data)
+    # validation split (10% of trainval, fixed seed for reproducibility)
+    val_size = int(0.1 * len(full_train_set))
+    train_size = len(full_train_set) - val_size
+    train_set, val_set = random_split(
+        full_train_set, [train_size, val_size],
+        generator=torch.Generator().manual_seed(42)
+    )
     # dataloader
     train_loader = DataLoader(train_set, batch_size=16, shuffle=True, num_workers=4, pin_memory=True)
-    test_loader = DataLoader(test_set,  batch_size=16,               num_workers=4, pin_memory=True)
+    val_loader   = DataLoader(val_set,   batch_size=16,               num_workers=4, pin_memory=True)
+    test_loader  = DataLoader(test_set,  batch_size=16,               num_workers=4, pin_memory=True)
 
     model = UNet(num_classes=3).to(device)
     loss_fn = nn.CrossEntropyLoss()
@@ -150,7 +157,8 @@ if __name__ == "__main__":
             total_loss += loss.item()
 
         scheduler.step()
-        print(f"Epoch {epoch + 1}/25, loss = {total_loss / len(train_loader):.4f}")
+        val_miou = evaluate(model, val_loader)
+        print(f"Epoch {epoch + 1}/25, loss = {total_loss / len(train_loader):.4f}, val mIoU = {val_miou:.4f}")
     
     # save to memory
     torch.save(model.state_dict(), "unet.pth")

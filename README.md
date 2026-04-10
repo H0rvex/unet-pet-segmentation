@@ -66,6 +66,4 @@ The dataset downloads automatically on first run (~800MB).
 
 ## Reference
 
-He, K., et al. — *Deep Residual Learning for Image Recognition* (2015) was used as prior work for understanding skip connections.
-
 Ronneberger, O., Fischer, P., & Brox, T. — *U-Net: Convolutional Networks for Biomedical Image Segmentation* (2015). [arXiv:1505.04597](https://arxiv.org/abs/1505.04597)
