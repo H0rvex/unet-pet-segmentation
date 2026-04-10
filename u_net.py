@@ -7,7 +7,7 @@ from torchvision import transforms
 from torchvision.datasets import OxfordIIITPet
 from PIL import Image
 
-device = torch.device("cuda")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # encoder
 class EncoderBlock(nn.Module):
@@ -134,6 +134,8 @@ if __name__ == "__main__":
 
     # training loop
     for epoch in range(25):
+        model.train()
+        total_loss = 0.0
         for images, masks in train_loader:
             images, masks = images.to(device), masks.to(device)
             # forward
@@ -145,8 +147,9 @@ if __name__ == "__main__":
             loss.backward()
             # update
             optimizer.step()
+            total_loss += loss.item()
 
-        print(f"Epoch {epoch}, loss = {loss.item():.4f}")
+        print(f"Epoch {epoch + 1}/25, loss = {total_loss / len(train_loader):.4f}")
     
     # save to memory
     torch.save(model.state_dict(), "unet.pth")
