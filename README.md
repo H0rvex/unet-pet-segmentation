@@ -53,7 +53,7 @@ Images resized to 128×128. Training uses standard normalization.
 pip install torch torchvision
 
 # Train and evaluate
-python u_net.py
+python train.py
 ```
 
 The dataset downloads automatically on first run (~800MB).

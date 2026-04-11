@@ -2,3 +2,6 @@ unet.pth
 data/
 __pycache__/
 *.pyc
+.vscode/
+
+
