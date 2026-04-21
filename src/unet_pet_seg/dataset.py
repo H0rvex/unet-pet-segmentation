@@ -32,7 +32,7 @@ def _build_spatial_transform(image_size: int, augment: bool) -> v2.Compose:
         return v2.Compose([
             v2.RandomResizedCrop(image_size, scale=(0.7, 1.0), ratio=(0.9, 1.1)),
             v2.RandomHorizontalFlip(p=0.5),
-            v2.RandomAffine(degrees=(10, 10), translate=(0.05, 0.05)),
+            v2.RandomAffine(degrees=(-10.0, 10.0), translate=(0.05, 0.05)),
             v2.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.2, hue=0.05),
         ])
     return v2.Compose([v2.Resize((image_size, image_size))])
