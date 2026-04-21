@@ -3,7 +3,9 @@ from __future__ import annotations
 import numpy as np
 import torch
 import torchvision.transforms.functional as TF
+from PIL import Image
 from torch.utils.data import Dataset, DataLoader, random_split
+from typing import Protocol
 from torchvision import tv_tensors
 from torchvision.datasets import OxfordIIITPet
 from torchvision.transforms import v2
@@ -13,6 +15,10 @@ from unet_pet_seg.utils.seeding import make_generator, worker_init_fn
 
 _MEAN = (0.485, 0.456, 0.406)
 _STD  = (0.229, 0.224, 0.225)
+
+class _PetLikeDataset(Protocol):
+    def __len__(self) -> int: ...
+    def __getitem__(self, idx: int) -> tuple[Image.Image, Image.Image]: ...
 
 
 def _build_spatial_transform(image_size: int, augment: bool) -> v2.Compose:
@@ -30,9 +36,8 @@ def _build_spatial_transform(image_size: int, augment: bool) -> v2.Compose:
         ])
     return v2.Compose([v2.Resize((image_size, image_size))])
 
-
 class PetSegDataset(Dataset):
-    def __init__(self, dataset: OxfordIIITPet, image_size: int, augment: bool = False) -> None:
+    def __init__(self, dataset: _PetLikeDataset, image_size: int, augment: bool = False) -> None:
         self.dataset   = dataset
         self.transform = _build_spatial_transform(image_size, augment)
 

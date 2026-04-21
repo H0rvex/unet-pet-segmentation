@@ -32,9 +32,9 @@ Extract a reusable `Trainer`; add the engineering signals a reviewer scans for f
 
 ## Phase 4 — Data pipeline credibility  `[structural · sonnet]`
 Current dataset has zero augmentation — the #1 tutorial tell for a segmentation repo.
-- [ ] Albumentations (or `v2` transforms): hflip, affine, color jitter, RandomResizedCrop — applied identically to img+mask
-- [ ] Bump default `IMAGE_SIZE` 128 → 256 (see Phase 7 decision)
-- [ ] Dataset unit test: mask dtype/range `{0,1,2}`, alignment under aug
+- [x] Albumentations (or `v2` transforms): hflip, affine, color jitter, RandomResizedCrop — applied identically to img+mask
+- [x] Bump default `IMAGE_SIZE` 128 → 256 (see Phase 7 decision)
+- [x] Dataset unit test: mask dtype/range `{0,1,2}`, alignment under aug
 
 ## Phase 5 — Tests  `[structural · sonnet]`
 Mirror sibling's `tests/`: `test_model.py`, `test_dataset.py`, `test_training.py`.
