@@ -6,6 +6,7 @@ import torchvision.transforms.functional as TF
 from PIL import Image
 from torch.utils.data import Dataset, DataLoader, random_split
 from typing import Protocol
+from torch.utils.data.distributed import DistributedSampler
 from torchvision import tv_tensors
 from torchvision.datasets import OxfordIIITPet
 from torchvision.transforms import v2
@@ -82,10 +83,16 @@ def get_dataloaders(cfg: Config) -> tuple[DataLoader, DataLoader, DataLoader]:
     train_set = torch.utils.data.Subset(aug_train_set, train_subset.indices)
     val_set   = torch.utils.data.Subset(full_train_set, val_subset.indices)
 
+    is_distributed = torch.distributed.is_available() and torch.distributed.is_initialized()
+    train_sampler = DistributedSampler(train_set, shuffle=True) if is_distributed else None
+    val_sampler   = DistributedSampler(val_set, shuffle=False) if is_distributed else None
+    test_sampler  = DistributedSampler(test_set, shuffle=False) if is_distributed else None
+
     train_loader = DataLoader(
         train_set,
         batch_size=cfg.batch_size,
-        shuffle=True,
+        shuffle=(train_sampler is None),
+        sampler=train_sampler,
         num_workers=cfg.num_workers,
         pin_memory=True,
         worker_init_fn=worker_init_fn,
@@ -94,6 +101,7 @@ def get_dataloaders(cfg: Config) -> tuple[DataLoader, DataLoader, DataLoader]:
         val_set,
         batch_size=cfg.batch_size,
         shuffle=False,
+        sampler=val_sampler,
         num_workers=cfg.num_workers,
         pin_memory=True,
         worker_init_fn=worker_init_fn,
@@ -102,6 +110,7 @@ def get_dataloaders(cfg: Config) -> tuple[DataLoader, DataLoader, DataLoader]:
         test_set,
         batch_size=cfg.batch_size,
         shuffle=False,
+        sampler=test_sampler,
         num_workers=cfg.num_workers,
         pin_memory=True,
         worker_init_fn=worker_init_fn,

@@ -6,6 +6,7 @@ from contextlib import nullcontext
 
 import torch
 import torch.nn as nn
+import typing
 from torch.cuda.amp import GradScaler
 from torch.cuda.amp import autocast
 from torch.utils.data import DataLoader
@@ -53,12 +54,22 @@ class Trainer:
         best_path = os.path.join(self.run_dir, "best.pth")
         last_path = os.path.join(self.run_dir, "last.pth")
 
-        # Fixed sample batch for periodic pred grid visualisation.
-        sample_images, sample_masks = next(iter(val_loader))
-        sample_images = sample_images[:4].to(self.device)
-        sample_masks  = sample_masks[:4].to(self.device)
+        is_main = not (torch.distributed.is_available() and torch.distributed.is_initialized()) or (
+            torch.distributed.get_rank() == 0
+        )
+
+        # Fixed sample batch for periodic pred grid visualisation (rank 0 only).
+        sample_images = sample_masks = None
+        if is_main:
+            sample_images, sample_masks = next(iter(val_loader))
+            sample_images = sample_images[:4].to(self.device)
+            sample_masks  = sample_masks[:4].to(self.device)
 
         for epoch in range(start_epoch, self.cfg.epochs + 1):
+            # DDP shuffles need epoch to be set so each rank sees a different order.
+            if hasattr(train_loader.sampler, "set_epoch"):
+                typing.cast(typing.Any, train_loader.sampler).set_epoch(epoch)
+
             train_loss, grad_norm = self._train_epoch(train_loader)
             self.scheduler.step()
 
@@ -66,27 +77,31 @@ class Trainer:
                 self.model, val_loader, self.device, self.cfg.num_classes
             )
             lr_now = self.optimizer.param_groups[0]["lr"]
-            self.logger.log_metrics(
-                epoch, self.cfg.epochs, train_loss, val_miou,
-                per_class_iou, lr_now, grad_norm,
-            )
+            if is_main:
+                self.logger.log_metrics(
+                    epoch, self.cfg.epochs, train_loss, val_miou,
+                    per_class_iou, lr_now, grad_norm,
+                )
 
-            if epoch % self.cfg.log_pred_every == 0:
+            if is_main and epoch % self.cfg.log_pred_every == 0 and sample_images is not None:
                 with torch.no_grad():
                     preds = self.model(sample_images).argmax(dim=1)
+                assert sample_masks is not None
                 self.logger.log_pred_grid(epoch, sample_images, sample_masks, preds)
 
-            self.save_checkpoint(last_path, epoch, best_miou)
-            if val_miou > best_miou:
-                best_miou = val_miou
-                self.save_checkpoint(best_path, epoch, best_miou)
+            if is_main:
+                self.save_checkpoint(last_path, epoch, best_miou)
+                if val_miou > best_miou:
+                    best_miou = val_miou
+                    self.save_checkpoint(best_path, epoch, best_miou)
 
         return best_miou
 
     def save_checkpoint(self, path: str, epoch: int, best_miou: float) -> None:
+        model = typing.cast(nn.Module, getattr(self.model, "module", self.model))
         torch.save({
             "epoch":     epoch,
-            "model":     self.model.state_dict(),
+            "model":     model.state_dict(),
             "optimizer": self.optimizer.state_dict(),
             "scheduler": self.scheduler.state_dict(),
             "scaler":    self.scaler.state_dict(),
@@ -97,7 +112,12 @@ class Trainer:
     def load_checkpoint(self, path: str) -> tuple[int, float]:
         """Restore all state. Returns (start_epoch, best_miou)."""
         ckpt = torch.load(path, map_location=self.device, weights_only=False)
-        self.model.load_state_dict(ckpt["model"])
+        model_state = ckpt["model"]
+        target = typing.cast(nn.Module, getattr(self.model, "module", self.model))
+        # Allow loading a DDP-saved checkpoint into a non-DDP model.
+        if any(k.startswith("module.") for k in model_state.keys()):
+            model_state = {k.removeprefix("module."): v for k, v in model_state.items()}
+        target.load_state_dict(model_state)
         self.optimizer.load_state_dict(ckpt["optimizer"])
         self.scheduler.load_state_dict(ckpt["scheduler"])
         if "scaler" in ckpt:

@@ -13,6 +13,7 @@ from pathlib import Path
 import torch
 import yaml
 from torch.cuda.amp import GradScaler
+from torch.nn.parallel import DistributedDataParallel as DDP
 
 # Allow running directly without installing the package.
 _REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -91,24 +92,58 @@ def build_scheduler(
 
 
 def main(cfg: Config, out_dir: str, resume: str | None = None) -> None:
-    run_dir = setup_run(out_dir, cfg)
-    print(f"Run dir   : {run_dir}")
+    is_distributed = int(os.environ.get("WORLD_SIZE", "1")) > 1
+    rank = int(os.environ.get("RANK", "0"))
+    local_rank = int(os.environ.get("LOCAL_RANK", "0"))
+    is_main = rank == 0
 
-    set_seed(cfg.seed)
-    device    = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    amp_on    = cfg.use_amp and device.type == "cuda"
-    print(f"Device    : {device}")
-    print(f"Config    : arch={cfg.arch}  size={cfg.image_size}  epochs={cfg.epochs}  lr={cfg.lr}"
-          f"  loss={cfg.loss}  schedule={cfg.lr_schedule}  amp={amp_on}  grad_clip={cfg.grad_clip}")
+    if is_distributed:
+        torch.distributed.init_process_group(backend="nccl")
+        torch.cuda.set_device(local_rank)
+
+    # Create a single run dir and share it across ranks.
+    if is_distributed:
+        run_dir_obj: list[str | None] = [None]
+        if is_main:
+            run_dir_obj[0] = setup_run(out_dir, cfg)
+        torch.distributed.broadcast_object_list(run_dir_obj, src=0)
+        run_dir = typing.cast(str, run_dir_obj[0])
+    else:
+        run_dir = setup_run(out_dir, cfg)
+
+    if is_main:
+        print(f"Run dir   : {run_dir}")
+
+    # Offset seed per-rank so DataLoader workers don't duplicate augmentations.
+    set_seed(cfg.seed + rank)
+
+    device = torch.device(f"cuda:{local_rank}" if torch.cuda.is_available() else "cpu")
+    amp_on = cfg.use_amp and device.type == "cuda"
+    if is_main:
+        print(f"Device    : {device}")
+        print(
+            f"Config    : arch={cfg.arch}  size={cfg.image_size}  epochs={cfg.epochs}  lr={cfg.lr}"
+            f"  loss={cfg.loss}  schedule={cfg.lr_schedule}  amp={amp_on}  grad_clip={cfg.grad_clip}"
+            + (f"  ddp=1 world={torch.distributed.get_world_size()}" if is_distributed else "")
+        )
 
     train_loader, val_loader, test_loader = get_dataloaders(cfg)
 
-    model     = build_model(cfg).to(device)
+    model = build_model(cfg).to(device)
+    if is_distributed:
+        model = DDP(model, device_ids=[local_rank], output_device=local_rank)
     loss_fn   = build_loss(cfg)
     optimizer = torch.optim.Adam(model.parameters(), lr=cfg.lr)
     scheduler = build_scheduler(optimizer, cfg)
     scaler    = GradScaler(enabled=amp_on)
-    logger    = Logger(run_dir)
+    if is_main:
+        logger: Logger | typing.Any = Logger(run_dir)
+    else:
+        class _NoOpLogger:
+            def log_metrics(self, *args: typing.Any, **kwargs: typing.Any) -> None: ...
+            def log_pred_grid(self, *args: typing.Any, **kwargs: typing.Any) -> None: ...
+            def close(self) -> None: ...
+        logger = _NoOpLogger()
 
     trainer = Trainer(model, loss_fn, optimizer, scheduler, scaler, cfg, device, logger, run_dir)
 
@@ -122,9 +157,13 @@ def main(cfg: Config, out_dir: str, resume: str | None = None) -> None:
         logger.close()
 
     _, test_miou = evaluate(model, test_loader, device, cfg.num_classes)
-    best_path = os.path.join(run_dir, "best.pth")
-    print(f"\nTest mIoU : {test_miou:.4f}")
-    print(f"Best val  : {best_miou:.4f}  → {best_path}")
+    if is_main:
+        best_path = os.path.join(run_dir, "best.pth")
+        print(f"\nTest mIoU : {test_miou:.4f}")
+        print(f"Best val  : {best_miou:.4f}  → {best_path}")
+
+    if is_distributed:
+        torch.distributed.destroy_process_group()
 
 
 if __name__ == "__main__":
