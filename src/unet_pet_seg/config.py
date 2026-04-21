@@ -9,6 +9,9 @@ class Config:
     num_classes: int = 3
     val_split: float = 0.1
 
+    # Model — one of "unet", "fcn_resnet50", "deeplabv3_resnet50"
+    arch: str = "unet"
+
     # Training
     batch_size: int = 16
     num_workers: int = 4

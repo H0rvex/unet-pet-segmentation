@@ -1,0 +1,20 @@
+# FCN-ResNet50 fine-tuning baseline.
+#
+# Uses the torchvision ImageNet-pretrained ResNet50 backbone with a freshly-
+# initialised FCN head (num_classes=3 is incompatible with the COCO-pretrained
+# head, so we can only reuse the backbone). A lower LR than the UNet recipe
+# keeps the pretrained backbone stable — reusing 1e-3 blows it up and produces
+# a strawman baseline.
+
+arch: fcn_resnet50
+image_size: 256
+batch_size: 8           # ResNet50 is ~4x the UNet param count; keep VRAM sane on 1060
+epochs: 30
+lr: 0.0001              # backbone-safe fine-tune rate (vs 1e-3 for UNet-from-scratch)
+grad_clip: 1.0
+lr_schedule: cosine
+warmup_epochs: 3
+use_aug: true
+use_amp: true
+seed: 42
+log_pred_every: 5

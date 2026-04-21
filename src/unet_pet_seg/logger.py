@@ -8,31 +8,10 @@ from pathlib import Path
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-import numpy as np
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
-# Per-class colours for mask visualisation (foreground, background, boundary).
-_MASK_COLORS = np.array([
-    [64,  170,  64],   # foreground — green
-    [ 30,  30,  30],   # background — near-black
-    [220,  60,  60],   # boundary   — red
-], dtype=np.uint8)
-
-_IMG_MEAN = np.array([0.485, 0.456, 0.406])
-_IMG_STD  = np.array([0.229, 0.224, 0.225])
-
-CLASS_NAMES = ["foreground", "background", "boundary"]
-
-
-def _colorize(mask: np.ndarray) -> np.ndarray:
-    return _MASK_COLORS[mask.clip(0, len(_MASK_COLORS) - 1)]
-
-
-def _unnormalize(img: torch.Tensor) -> np.ndarray:
-    """(3,H,W) ImageNet-normalized tensor → (H,W,3) float32 in [0,1]."""
-    arr = img.cpu().float().numpy().transpose(1, 2, 0)
-    return np.clip(arr * _IMG_STD + _IMG_MEAN, 0.0, 1.0)
+from unet_pet_seg.viz import CLASS_NAMES, colorize_mask, unnormalize
 
 
 class Logger:
@@ -92,9 +71,9 @@ class Logger:
         n = min(n, images.size(0))
         fig, axes = plt.subplots(n, 3, figsize=(9, 3 * n), squeeze=False)
         for i in range(n):
-            axes[i, 0].imshow(_unnormalize(images[i]))
-            axes[i, 1].imshow(_colorize(masks[i].cpu().numpy()))
-            axes[i, 2].imshow(_colorize(preds[i].cpu().numpy()))
+            axes[i, 0].imshow(unnormalize(images[i]))
+            axes[i, 1].imshow(colorize_mask(masks[i].cpu().numpy()))
+            axes[i, 2].imshow(colorize_mask(preds[i].cpu().numpy()))
         axes[0, 0].set_title("Input",  fontsize=9)
         axes[0, 1].set_title("GT",     fontsize=9)
         axes[0, 2].set_title("Pred",   fontsize=9)

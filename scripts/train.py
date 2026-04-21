@@ -21,11 +21,11 @@ _SRC_DIR = (_REPO_ROOT / "src").resolve()
 if _SRC_DIR.is_dir() and str(_SRC_DIR) not in sys.path:
     sys.path.insert(0, str(_SRC_DIR))
 
+from unet_pet_seg.baselines import build_model
 from unet_pet_seg.config import Config
 from unet_pet_seg.dataset import get_dataloaders
 from unet_pet_seg.evaluate import evaluate
 from unet_pet_seg.logger import Logger
-from unet_pet_seg.model import UNet
 from unet_pet_seg.trainer import Trainer
 from unet_pet_seg.utils.seeding import set_seed
 
@@ -98,12 +98,12 @@ def main(cfg: Config, out_dir: str, resume: str | None = None) -> None:
     device    = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     amp_on    = cfg.use_amp and device.type == "cuda"
     print(f"Device    : {device}")
-    print(f"Config    : size={cfg.image_size}  epochs={cfg.epochs}  lr={cfg.lr}"
+    print(f"Config    : arch={cfg.arch}  size={cfg.image_size}  epochs={cfg.epochs}  lr={cfg.lr}"
           f"  schedule={cfg.lr_schedule}  amp={amp_on}  grad_clip={cfg.grad_clip}")
 
     train_loader, val_loader, test_loader = get_dataloaders(cfg)
 
-    model     = UNet(num_classes=cfg.num_classes).to(device)
+    model     = build_model(cfg).to(device)
     loss_fn   = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=cfg.lr)
     scheduler = build_scheduler(optimizer, cfg)

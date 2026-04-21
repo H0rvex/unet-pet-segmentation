@@ -38,16 +38,17 @@ Current dataset has zero augmentation — the #1 tutorial tell for a segmentatio
 
 ## Phase 5 — Tests  `[structural · sonnet]`
 Mirror sibling's `tests/`: `test_model.py`, `test_dataset.py`, `test_training.py`.
-- [ ] Model: forward shape, param count sanity, gradient flow
-- [ ] Dataset: shapes, label range, deterministic seed
-- [ ] Training: 1-step overfit-one-batch smoke test (catches silent bugs pre-run)
+- [x] Model: forward shape, param count sanity, gradient flow
+- [x] Dataset: shapes, label range, deterministic seed
+- [x] Training: 1-step overfit-one-batch smoke test (catches silent bugs pre-run)
 
 ## Phase 6 — Results & visualization  `[content · opus]`
 A segmentation repo without pictures is uncheckable. This is the biggest ROI visible change.
-- [ ] `scripts/visualize.py`: save input/GT/pred/overlay grid for N test images → `artifacts/preds/`
-- [ ] Parse TensorBoard logs → `artifacts/curves.png` (loss + per-class IoU)
-- [ ] Baseline row: torchvision `fcn_resnet50` or `deeplabv3_resnet50` fine-tuned same schedule — makes 0.7422 interpretable
-- [ ] `artifacts/` committed (small PNGs only), referenced from README
+- [x] `scripts/visualize.py`: save input/GT/pred/overlay grid for N test images → `artifacts/preds/`
+- [x] Parse metrics.jsonl → `artifacts/curves.png` (loss + val mIoU + per-class IoU) *(scripts/plot_curves.py; JSONL is cheaper than parsing TB event files)*
+- [x] Baseline infra: `TVAdapter` around `fcn_resnet50` + `configs/baseline_fcn.yaml` (backbone-only pretrain, lr=1e-4 fine-tune) — `cfg.arch` dispatch via `build_model`
+- [x] `.gitignore` now allows `artifacts/*.png` and `artifacts/preds/*` (keeps `*.pth` excluded); Makefile gains `viz`, `curves`, `baseline` targets
+- [ ] Actual baseline/unet training + commit of PNGs — deferred to Phase 8 (no checkpoints exist yet); README reference deferred to Phase 9
 
 ## Phase 7 — Scope & recipe decisions  `[decision · advisor]`
 Call advisor once before Phase 8 re-train; budget is a GTX 1060.

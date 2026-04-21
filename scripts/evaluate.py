@@ -14,10 +14,10 @@ _SRC_DIR = (_REPO_ROOT / "src").resolve()
 if _SRC_DIR.is_dir() and str(_SRC_DIR) not in sys.path:
     sys.path.insert(0, str(_SRC_DIR))
 
+from unet_pet_seg.baselines import build_model
 from unet_pet_seg.config import Config
 from unet_pet_seg.dataset import get_dataloaders
 from unet_pet_seg.evaluate import evaluate
-from unet_pet_seg.model import UNet
 
 CLASS_NAMES = ["foreground", "background", "boundary"]
 
@@ -38,7 +38,7 @@ def main() -> None:
     if args.data_dir is not None:
         cfg = dataclasses.replace(cfg, data_dir=args.data_dir)
 
-    model = UNet(num_classes=cfg.num_classes).to(device)
+    model = build_model(cfg).to(device)
     model.load_state_dict(ckpt["model"])
 
     _, _, test_loader = get_dataloaders(cfg)
