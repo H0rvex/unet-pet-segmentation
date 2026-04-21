@@ -4,7 +4,7 @@ install:
 	pip install -e ".[dev]"
 
 train:
-	python scripts/train.py
+	python scripts/train.py --config configs/unet_base.yaml
 
 eval:
 	@[ "$(CHECKPOINT)" ] || { echo "Usage: make eval CHECKPOINT=artifacts/unet.pth"; exit 1; }

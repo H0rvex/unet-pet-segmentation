@@ -10,11 +10,11 @@
 
 ## Phase 1 — Packaging & layout  `[mechanical · sonnet]`
 Move flat files into the sibling's layout so the repo reads as a package, not a script dump.
-- [ ] Create `src/unet_pet_seg/{__init__,model,dataset,trainer,evaluator,logger,config}.py`
-- [ ] Move `train.py` / `evaluate.py` → `scripts/`; update imports
-- [ ] Add `pyproject.toml` (package, pinned deps, entry points), pin `requirements.txt`
-- [ ] Add `Makefile` (`install`, `train`, `eval`, `test`, `lint`, `viz`)
-- [ ] `.gitignore`: `data/`, `runs/`, `artifacts/`, `*.pth`
+- [x] Create `src/unet_pet_seg/{__init__,model,dataset,trainer,evaluator,logger,config}.py`
+- [x] Move `train.py` / `evaluate.py` → `scripts/`; update imports
+- [x] Add `pyproject.toml` (package, pinned deps, entry points), pin `requirements.txt`
+- [x] Add `Makefile` (`install`, `train`, `eval`, `test`, `lint`, `viz`)
+- [x] `.gitignore`: `data/`, `runs/`, `artifacts/`, `*.pth`
 
 ## Phase 2 — Config & CLI  `[structural · sonnet]`
 Replace the global-constants `config.py` with yaml + dataclass; kills "tutorial" smell.
@@ -69,14 +69,14 @@ Do not fold into Phase 4. Own phase so the time cost is visible.
 ---
 
 ## Triage summary
-| Phase | Type | Model | Est. |
-|---|---|---|---|
-| 1 Packaging | mechanical | sonnet | 1h |
-| 2 Config/CLI | structural | sonnet | 1h |
-| 3 Trainer+AMP | structural | sonnet | 2h |
-| 4 Data aug | structural | sonnet | 1h |
-| 5 Tests | structural | sonnet | 1h |
-| 6 Viz+baseline | content | opus | 2h |
-| 7 Decisions | decision | advisor | 20m |
-| 8 Re-train | mechanical | sonnet | 4–8h wall |
-| 9 README | content | opus | 1h |
+| Phase          | Type       | Model   | Est.      |
+| -------------- | ---------- | ------- | --------- |
+| 1 Packaging    | mechanical | sonnet  | 1h        |
+| 2 Config/CLI   | structural | sonnet  | 1h        |
+| 3 Trainer+AMP  | structural | sonnet  | 2h        |
+| 4 Data aug     | structural | sonnet  | 1h        |
+| 5 Tests        | structural | sonnet  | 1h        |
+| 6 Viz+baseline | content    | opus    | 2h        |
+| 7 Decisions    | decision   | advisor | 20m       |
+| 8 Re-train     | mechanical | sonnet  | 4–8h wall |
+| 9 README       | content    | opus    | 1h        |

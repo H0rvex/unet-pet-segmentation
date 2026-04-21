@@ -1,23 +1,26 @@
-import torch
+from dataclasses import dataclass
 
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# data
-DATA_ROOT    = "./data"
-IMAGE_SIZE   = 128
-NUM_CLASSES  = 3
-VAL_SPLIT    = 0.1
-RANDOM_SEED  = 42
+@dataclass
+class Config:
+    # Data
+    data_dir: str = "./data"
+    image_size: int = 128
+    num_classes: int = 3
+    val_split: float = 0.1
 
-# training
-BATCH_SIZE   = 16
-NUM_WORKERS  = 4
-EPOCHS       = 25
-LR           = 0.001
+    # Training
+    batch_size: int = 16
+    num_workers: int = 4
+    epochs: int = 25
+    lr: float = 1e-3
 
-# scheduler
-SCHEDULER_STEP_SIZE = 10
-SCHEDULER_GAMMA     = 0.1
+    # LR schedule: StepLR (replaced by cosine in Phase 3)
+    scheduler_step_size: int = 10
+    scheduler_gamma: float = 0.1
 
-# output
-CHECKPOINT_PATH = "artifacts/unet.pth"
+    # Mixed precision — wired into trainer in Phase 3
+    use_amp: bool = False
+
+    # Reproducibility
+    seed: int = 42

@@ -1,0 +1,10 @@
+# Target config — 256px + augmentation (aug pipeline added in Phase 4).
+# Batch size reduced to fit GTX 1060 6 GB at 256px.
+image_size: 256
+batch_size: 16
+epochs: 30
+lr: 0.001
+scheduler_step_size: 10
+scheduler_gamma: 0.1
+use_amp: true
+seed: 42
