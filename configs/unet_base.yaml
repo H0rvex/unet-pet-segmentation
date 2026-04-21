@@ -1,9 +1,12 @@
-# Baseline config — 128px, no augmentation, matches original reported results.
+# Baseline config — 128px, StepLR, no AMP. Reproduces the original reported results.
 image_size: 128
 batch_size: 16
 epochs: 25
 lr: 0.001
+grad_clip: 1.0
+lr_schedule: step
 scheduler_step_size: 10
 scheduler_gamma: 0.1
 use_amp: false
 seed: 42
+log_pred_every: 5

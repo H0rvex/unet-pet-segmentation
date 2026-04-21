@@ -18,9 +18,9 @@ Move flat files into the sibling's layout so the repo reads as a package, not a 
 
 ## Phase 2 — Config & CLI  `[structural · sonnet]`
 Replace the global-constants `config.py` with yaml + dataclass; kills "tutorial" smell.
-- [ ] `configs/unet_base.yaml` + `unet_256_aug.yaml`; dataclass loader with type hints
-- [ ] `argparse` in `scripts/train.py`: `--config`, `--resume`, `--out-dir`, `--seed`
-- [ ] Full seeding helper (torch, numpy, python, `cudnn.deterministic`) — document non-determinism honestly
+- [x] `configs/unet_base.yaml` + `unet_256_aug.yaml`; dataclass loader with type hints
+- [x] `argparse` in `scripts/train.py`: `--config`, `--resume`, `--out-dir`, `--seed`
+- [x] Full seeding helper (torch, numpy, python, `cudnn.deterministic`) — document non-determinism honestly
 
 ## Phase 3 — Training loop lift  `[structural · sonnet]`
 Extract a reusable `Trainer`; add the engineering signals a reviewer scans for first.

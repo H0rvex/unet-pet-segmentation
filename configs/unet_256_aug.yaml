@@ -1,10 +1,11 @@
-# Target config — 256px + augmentation (aug pipeline added in Phase 4).
-# Batch size reduced to fit GTX 1060 6 GB at 256px.
+# Target config — 256px, cosine LR with warmup, AMP. Aug pipeline added in Phase 4.
 image_size: 256
 batch_size: 16
 epochs: 30
 lr: 0.001
-scheduler_step_size: 10
-scheduler_gamma: 0.1
+grad_clip: 1.0
+lr_schedule: cosine
+warmup_epochs: 3
 use_amp: true
 seed: 42
+log_pred_every: 5
