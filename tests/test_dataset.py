@@ -6,7 +6,7 @@ import torch
 from PIL import Image
 from torch.utils.data import DataLoader
 
-from unet_pet_seg.dataset import PetSegDataset, _MEAN, _STD
+from unet_pet_seg.dataset import PetSegDataset
 
 _PET_DATA_DIR = os.path.join(".", "data", "oxford-iiit-pet")
 
@@ -84,7 +84,6 @@ def test_no_aug_is_deterministic():
 def test_aug_produces_varied_outputs():
     """Same index, augmentation on → outputs should differ across calls."""
     ds = _make_dataset(augment=True, image_size=128)
-    seen_equal = all(torch.equal(ds[0][0], ds[0][0]) for _ in range(10))
     # At least one pair must differ over 10 samples (p≈1 for any real aug)
     outputs = [ds[0][0] for _ in range(10)]
     assert not all(torch.equal(outputs[0], o) for o in outputs[1:]), (

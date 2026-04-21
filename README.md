@@ -16,7 +16,7 @@ Dense per-pixel classification is the same computational primitive behind free-s
 | **UNet-256 (CE+Dice, aug)** | **7.70M** | **0.7479** | **0.8225** | **0.8977** | **0.5236** | **—**     |
 | FCN-ResNet50 (fine-tuned) | 32.95M | 0.8159  | 0.8971  | 0.9459  | 0.6045       | —               |
 
-*Metrics are best-val-checkpoint numbers on the held-out validation split (test split not separately evaluated; see Limitations). UNet-256 vs UNet-128 isolates the effect of resolution + augmentation + Dice. FCN-ResNet50 anchors the comparison against a pretrained backbone. Latency not benchmarked — runs were on Kaggle P100, not local GTX 1060.*
+*Table metrics are best-val-checkpoint numbers on the held-out validation split. Test-split metrics are persisted per run in `runs/<ts>/test_metrics.json` via `scripts/train.py` or `scripts/evaluate.py`. UNet-256 vs UNet-128 isolates the effect of resolution + augmentation + Dice. FCN-ResNet50 anchors the comparison against a pretrained backbone. Latency numbers are generated with `scripts/benchmark.py` and written to `artifacts/benchmarks/*.json`.*
 
 ![Training curves](artifacts/curves.png)
 
@@ -71,8 +71,8 @@ Common: Adam, lr=1e-3 (UNet) / 1e-4 (FCN fine-tune to keep the pretrained backbo
 - **Oxford-IIIT Pet is easy** relative to outdoor / AV data: clean foregrounds, uniform scale, no occlusion, no motion blur. High mIoU here says little about domain robustness.
 - **GTX 1060, 6 GB**: forces batch 8 at 256px for FCN-ResNet50. 384px was considered and rejected — 2.25× step cost, batch ≤ 4, <1 mIoU gain on this dataset.
 - **Boundary class** is narrow (~5–10% of pixels); per-class IoU there swings more than the mean — judge by IoU_boundary, not just mIoU.
-- **No TTA, no CRF post-processing, no multi-scale eval** — results are raw single-pass argmax on the held-out test split.
-- **Reported mIoU is validation-split mIoU** (best val checkpoint). The held-out test split was not separately evaluated — one fewer table column to overfit on, but you should run `make eval CHECKPOINT=runs/<ts>/best.pth` on the test split to verify.
+- **No TTA, no CRF post-processing, no multi-scale eval** — evaluation is raw single-pass argmax on validation/test.
+- **Headline table reports validation mIoU** (best val checkpoint). Test-split metrics are still tracked and written to `runs/<ts>/test_metrics.json`.
 - **Non-determinism is documented, not eliminated**: seeding + `cudnn.deterministic`, but GPU ops retain residual non-determinism. Variance across seeds is not characterized — single-run numbers.
 
 ## Reproduce
@@ -80,6 +80,9 @@ Common: Adam, lr=1e-3 (UNet) / 1e-4 (FCN fine-tune to keep the pretrained backbo
 ```bash
 # Install (editable, pulls pyproject deps)
 make install
+
+# Optional deployment/runtime extras (ONNX + ONNX Runtime)
+pip install -e ".[deploy]"
 
 # Train the three configs (Oxford-IIIT Pet downloads on first run, ~800 MB)
 make train          # UNet-128 baseline (matches prior 0.7422)
@@ -91,6 +94,7 @@ torchrun --nproc_per_node=2 scripts/train.py --config configs/unet_256_aug.yaml
 
 # Evaluate a checkpoint on the test split (per-class + mean IoU)
 make eval CHECKPOINT=runs/<ts>/best.pth
+# Writes runs/<ts>/test_metrics.json by default.
 
 # Qualitative grid → artifacts/preds/sample_*.png
 make viz CHECKPOINT=runs/<ts>/best.pth
@@ -98,11 +102,25 @@ make viz CHECKPOINT=runs/<ts>/best.pth
 # Training curves → artifacts/curves.png
 make curves RUN_DIR=runs/<ts>
 
+# Export ONNX (default path: artifacts/onnx/<arch>_<size>_<checkpoint>.onnx)
+make export-onnx CHECKPOINT=runs/<ts>/best.pth
+
+# Benchmark inference and persist metrics to artifacts/benchmarks/*.json
+make bench CHECKPOINT=runs/<ts>/best.pth
+
 # Tests (model shapes, dataset invariants, one-batch overfit smoke test)
 make test
+
+# Local CI equivalent (lint + tests)
+make ci
 ```
 
 TensorBoard lives at `runs/<ts>/tb/`; prediction grids are logged every 5 epochs alongside scalars.
+Canonical machine-readable outputs:
+- `runs/<ts>/metrics.jsonl` (per-epoch training + val metrics)
+- `runs/<ts>/test_metrics.json` (final test metrics for a checkpoint)
+- `artifacts/benchmarks/*.json` (latency/throughput runs)
+- `artifacts/onnx/*.onnx` (exported inference graphs)
 
 ## Why this matters for perception work
 
@@ -111,3 +129,7 @@ The topology transfers; the *decisions* are what a reviewer should care about. T
 ## Reference
 
 Ronneberger, O., Fischer, P., & Brox, T. — *U-Net: Convolutional Networks for Biomedical Image Segmentation* (2015). [arXiv:1505.04597](https://arxiv.org/abs/1505.04597)
+
+## License
+
+MIT — see `LICENSE`.

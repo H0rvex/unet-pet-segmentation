@@ -61,13 +61,11 @@ def test_initial_loss_near_log_num_classes():
     """Random-init cross-entropy should be close to log(num_classes) = log(3) ≈ 1.099."""
     model = UNet(num_classes=_CLASSES)
     model.eval()
-    device = torch.device("cpu")
     loss_fn = nn.CrossEntropyLoss()
     x = torch.randn(4, 3, _IMG_SIZE, _IMG_SIZE)
     y = torch.randint(0, _CLASSES, (4, _IMG_SIZE, _IMG_SIZE))
     with torch.no_grad():
         loss = loss_fn(model(x), y).item()
-    import math
     assert abs(loss - math.log(_CLASSES)) < 0.5, f"Unexpected initial loss: {loss:.4f}"
 
 

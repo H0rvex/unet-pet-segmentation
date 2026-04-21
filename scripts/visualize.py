@@ -4,6 +4,8 @@ A segmentation repo without pictures is uncheckable; this script is the bridge
 between a .pth on disk and a reviewer who wants to *see* the model's output.
 """
 
+# ruff: noqa: E402
+
 from __future__ import annotations
 
 import argparse
@@ -11,8 +13,6 @@ import dataclasses
 import sys
 from pathlib import Path
 
-import matplotlib
-matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import torch
 
@@ -46,10 +46,14 @@ def _save_sample(
     pred_np = pred.cpu().numpy()
 
     fig, axes = plt.subplots(1, 4, figsize=(12, 3.2))
-    axes[0].imshow(img_np);                          axes[0].set_title("Input")
-    axes[1].imshow(colorize_mask(gt_np));            axes[1].set_title("Ground truth")
-    axes[2].imshow(colorize_mask(pred_np));          axes[2].set_title("Prediction")
-    axes[3].imshow(overlay_mask(img_np, pred_np));   axes[3].set_title("Overlay")
+    axes[0].imshow(img_np)
+    axes[0].set_title("Input")
+    axes[1].imshow(colorize_mask(gt_np))
+    axes[1].set_title("Ground truth")
+    axes[2].imshow(colorize_mask(pred_np))
+    axes[2].set_title("Prediction")
+    axes[3].imshow(overlay_mask(img_np, pred_np))
+    axes[3].set_title("Overlay")
     for ax in axes:
         ax.axis("off")
     fig.tight_layout()

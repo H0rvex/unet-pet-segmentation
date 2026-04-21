@@ -2,13 +2,12 @@ from __future__ import annotations
 
 import dataclasses
 import os
+import typing
 from contextlib import nullcontext
 
 import torch
 import torch.nn as nn
-import typing
-from torch.cuda.amp import GradScaler
-from torch.cuda.amp import autocast
+from torch.cuda.amp import GradScaler, autocast
 from torch.utils.data import DataLoader
 
 from unet_pet_seg.config import Config

@@ -4,6 +4,8 @@ Reads the JSONL that logger.py emits per epoch — avoids pulling in TensorBoard
 event-file parser just to plot three time series.
 """
 
+# ruff: noqa: E402
+
 from __future__ import annotations
 
 import argparse
@@ -11,8 +13,6 @@ import json
 import sys
 from pathlib import Path
 
-import matplotlib
-matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]

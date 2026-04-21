@@ -1,11 +1,12 @@
 from __future__ import annotations
 
+from typing import Protocol
+
 import numpy as np
 import torch
 import torchvision.transforms.functional as TF
 from PIL import Image
-from torch.utils.data import Dataset, DataLoader, random_split
-from typing import Protocol
+from torch.utils.data import DataLoader, Dataset, random_split
 from torch.utils.data.distributed import DistributedSampler
 from torchvision import tv_tensors
 from torchvision.datasets import OxfordIIITPet

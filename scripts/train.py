@@ -1,10 +1,13 @@
 """Entry point: train U-Net on Oxford-IIIT Pet and save the best checkpoint."""
 
+# ruff: noqa: E402
+
 from __future__ import annotations
 
 import argparse
 import dataclasses
 import datetime
+import json
 import os
 import sys
 import typing
@@ -29,6 +32,8 @@ from unet_pet_seg.logger import Logger
 from unet_pet_seg.losses import build_loss
 from unet_pet_seg.trainer import Trainer
 from unet_pet_seg.utils.seeding import set_seed
+
+CLASS_NAMES = ["foreground", "background", "boundary"]
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -156,10 +161,23 @@ def main(cfg: Config, out_dir: str, resume: str | None = None) -> None:
     finally:
         logger.close()
 
-    _, test_miou = evaluate(model, test_loader, device, cfg.num_classes)
+    test_iou, test_miou = evaluate(model, test_loader, device, cfg.num_classes)
     if is_main:
         best_path = os.path.join(run_dir, "best.pth")
+        metrics_path = os.path.join(run_dir, "test_metrics.json")
+        metrics_payload = {
+            "checkpoint": str(Path(best_path).resolve()),
+            "split": "test",
+            "miou": round(test_miou, 4),
+            "per_class_iou": {
+                name: round(score, 4)
+                for name, score in zip(CLASS_NAMES, test_iou.tolist())
+            },
+        }
+        with open(metrics_path, "w", encoding="utf-8") as fh:
+            json.dump(metrics_payload, fh, indent=2)
         print(f"\nTest mIoU : {test_miou:.4f}")
+        print(f"Test JSON : {metrics_path}")
         print(f"Best val  : {best_miou:.4f}  → {best_path}")
 
     if is_distributed:
