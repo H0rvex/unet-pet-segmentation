@@ -24,11 +24,11 @@ Replace the global-constants `config.py` with yaml + dataclass; kills "tutorial"
 
 ## Phase 3 — Training loop lift  `[structural · sonnet]`
 Extract a reusable `Trainer`; add the engineering signals a reviewer scans for first.
-- [ ] `Trainer` class: fit/validate/checkpoint/resume, best-mIoU tracking, early stop
-- [ ] AMP (`torch.amp.autocast` + `GradScaler`) — cheap Nvidia-facing signal
-- [ ] `grad_clip`, `torch.compile` toggle, cosine LR option
-- [ ] TensorBoard logger: loss, per-class IoU, LR, grad-norm, sample pred grid every N epochs
-- [ ] Checkpoint `{epoch, model, opt, scaler, best_miou, config_hash}`
+- [x] `Trainer` class: fit/validate/checkpoint/resume, best-mIoU tracking, early stop
+- [x] AMP (`torch.amp.autocast` + `GradScaler`) — cheap Nvidia-facing signal
+- [x] `grad_clip`, `torch.compile` toggle, cosine LR option
+- [x] TensorBoard logger: loss, per-class IoU, LR, grad-norm, sample pred grid every N epochs
+- [x] Checkpoint `{epoch, model, opt, scaler, best_miou, config_hash}`
 
 ## Phase 4 — Data pipeline credibility  `[structural · sonnet]`
 Current dataset has zero augmentation — the #1 tutorial tell for a segmentation repo.

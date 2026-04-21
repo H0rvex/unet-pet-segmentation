@@ -22,6 +22,9 @@ class Config:
     scheduler_step_size: int = 10  # used only when lr_schedule="step"
     scheduler_gamma: float = 0.1   # used only when lr_schedule="step"
 
+    # Augmentation (training set only; val/test never augmented)
+    use_aug: bool = False
+
     # Mixed precision (CUDA only; silently disabled on CPU)
     use_amp: bool = True
 
