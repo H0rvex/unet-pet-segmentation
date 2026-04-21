@@ -1,7 +1,11 @@
-unet.pth
 data/
+runs/
+artifacts/*.pth
+artifacts/*.png
+artifacts/*.json
 __pycache__/
 *.pyc
+*.egg-info/
 .vscode/
-
-
+.pytest_cache/
+.ruff_cache/

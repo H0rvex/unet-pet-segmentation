@@ -20,4 +20,4 @@ SCHEDULER_STEP_SIZE = 10
 SCHEDULER_GAMMA     = 0.1
 
 # output
-CHECKPOINT_PATH = "unet.pth"
+CHECKPOINT_PATH = "artifacts/unet.pth"

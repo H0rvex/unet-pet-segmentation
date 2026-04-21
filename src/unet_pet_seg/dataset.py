@@ -3,14 +3,14 @@ from torch.utils.data import Dataset, DataLoader, random_split
 from torchvision import transforms
 from torchvision.datasets import OxfordIIITPet
 
-from config import (
+from unet_pet_seg.config import (
     DATA_ROOT, IMAGE_SIZE, BATCH_SIZE, NUM_WORKERS,
     VAL_SPLIT, RANDOM_SEED,
 )
 
 
 class PetSegDataset(Dataset):
-    def __init__(self, dataset):
+    def __init__(self, dataset: OxfordIIITPet) -> None:
         self.dataset = dataset
         self.img_transform = transforms.Compose([
             transforms.Resize((IMAGE_SIZE, IMAGE_SIZE)),
@@ -22,10 +22,10 @@ class PetSegDataset(Dataset):
             transforms.ToTensor(),
         ])
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.dataset)
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx: int) -> tuple[torch.Tensor, torch.Tensor]:
         image, mask = self.dataset[idx]
         image = self.img_transform(image)
         mask  = self.mask_transform(mask)
@@ -33,14 +33,13 @@ class PetSegDataset(Dataset):
         return image, mask
 
 
-def get_dataloaders():
+def get_dataloaders() -> tuple[DataLoader, DataLoader, DataLoader]:
     train_data = OxfordIIITPet(root=DATA_ROOT, split="trainval", target_types="segmentation", download=True)
     test_data  = OxfordIIITPet(root=DATA_ROOT, split="test",     target_types="segmentation", download=True)
 
     full_train_set = PetSegDataset(train_data)
     test_set       = PetSegDataset(test_data)
 
-    # split 10% of trainval into validation (fixed seed for reproducibility)
     val_size   = int(VAL_SPLIT * len(full_train_set))
     train_size = len(full_train_set) - val_size
     train_set, val_set = random_split(
@@ -48,8 +47,8 @@ def get_dataloaders():
         generator=torch.Generator().manual_seed(RANDOM_SEED),
     )
 
-    train_loader = DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=True, num_workers=NUM_WORKERS, pin_memory=True)
-    val_loader   = DataLoader(val_set,   batch_size=BATCH_SIZE,               num_workers=NUM_WORKERS, pin_memory=True)
-    test_loader  = DataLoader(test_set,  batch_size=BATCH_SIZE,               num_workers=NUM_WORKERS, pin_memory=True)
+    train_loader = DataLoader(train_set, batch_size=BATCH_SIZE, shuffle=True,  num_workers=NUM_WORKERS, pin_memory=True)
+    val_loader   = DataLoader(val_set,   batch_size=BATCH_SIZE, shuffle=False, num_workers=NUM_WORKERS, pin_memory=True)
+    test_loader  = DataLoader(test_set,  batch_size=BATCH_SIZE, shuffle=False, num_workers=NUM_WORKERS, pin_memory=True)
 
     return train_loader, val_loader, test_loader
