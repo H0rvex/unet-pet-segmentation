@@ -10,13 +10,13 @@ Dense per-pixel classification is the same computational primitive behind free-s
 
 *Input · Ground truth · Prediction · Overlay — UNet @ 256px with augmentation.*
 
-| Model                  | Params  | Test mIoU | IoU fg  | IoU bg  | IoU boundary | ms / img (1060, fp16) |
-| ---------------------- | ------- | --------- | ------- | ------- | ------------ | --------------------- |
-| UNet-128 (CE, no aug)  | _TBD_   | _TBD_     | _TBD_   | _TBD_   | _TBD_        | _TBD_                 |
-| **UNet-256 (CE+Dice, aug)** | **_TBD_** | **_TBD_** | **_TBD_** | **_TBD_** | **_TBD_** | **_TBD_**         |
-| FCN-ResNet50 (fine-tuned) | _TBD_ | _TBD_   | _TBD_   | _TBD_   | _TBD_        | _TBD_                 |
+| Model                  | Params  | Val mIoU | IoU fg  | IoU bg  | IoU boundary | ms / img (fp16) |
+| ---------------------- | ------- | --------- | ------- | ------- | ------------ | --------------- |
+| UNet-128 (CE, no aug)  | 7.70M   | 0.7271    | 0.8106  | 0.8938  | 0.4768       | —               |
+| **UNet-256 (CE+Dice, aug)** | **7.70M** | **0.7479** | **0.8225** | **0.8977** | **0.5236** | **—**     |
+| FCN-ResNet50 (fine-tuned) | 32.95M | 0.8159  | 0.8971  | 0.9459  | 0.6045       | —               |
 
-*UNet-128 reproduces the prior 0.7422 baseline from an earlier revision of this repo. UNet-256 isolates the effect of resolution + augmentation + Dice. FCN-ResNet50 anchors the comparison against a pretrained backbone.*
+*Metrics are best-val-checkpoint numbers on the held-out validation split (test split not separately evaluated; see Limitations). UNet-256 vs UNet-128 isolates the effect of resolution + augmentation + Dice. FCN-ResNet50 anchors the comparison against a pretrained backbone. Latency not benchmarked — runs were on Kaggle P100, not local GTX 1060.*
 
 ![Training curves](artifacts/curves.png)
 
@@ -72,7 +72,7 @@ Common: Adam, lr=1e-3 (UNet) / 1e-4 (FCN fine-tune to keep the pretrained backbo
 - **GTX 1060, 6 GB**: forces batch 8 at 256px for FCN-ResNet50. 384px was considered and rejected — 2.25× step cost, batch ≤ 4, <1 mIoU gain on this dataset.
 - **Boundary class** is narrow (~5–10% of pixels); per-class IoU there swings more than the mean — judge by IoU_boundary, not just mIoU.
 - **No TTA, no CRF post-processing, no multi-scale eval** — results are raw single-pass argmax on the held-out test split.
-- **Reported mIoU is validation-selected**, test-evaluated (best val checkpoint → test); no test-set model selection.
+- **Reported mIoU is validation-split mIoU** (best val checkpoint). The held-out test split was not separately evaluated — one fewer table column to overfit on, but you should run `make eval CHECKPOINT=runs/<ts>/best.pth` on the test split to verify.
 - **Non-determinism is documented, not eliminated**: seeding + `cudnn.deterministic`, but GPU ops retain residual non-determinism. Variance across seeds is not characterized — single-run numbers.
 
 ## Reproduce

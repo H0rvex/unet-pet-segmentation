@@ -27,6 +27,12 @@ def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Plot training curves from a run's metrics.jsonl")
     p.add_argument("--run-dir", required=True, metavar="DIR",
                    help="Run directory containing metrics.jsonl (e.g. runs/20260421_120000)")
+    p.add_argument(
+        "--metrics-jsonl",
+        default=None,
+        metavar="PATH",
+        help="Explicit path to metrics JSONL (overrides default metrics.jsonl inside --run-dir)",
+    )
     p.add_argument("--out", type=str, default="artifacts/curves.png", metavar="PATH",
                    help="Output PNG path (default: artifacts/curves.png)")
     p.add_argument("--title", type=str, default=None,
@@ -34,20 +40,35 @@ def parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
-def _load_metrics(run_dir: Path) -> list[dict]:
-    jsonl = run_dir / "metrics.jsonl"
-    if not jsonl.exists():
-        raise FileNotFoundError(f"No metrics.jsonl in {run_dir}")
-    with open(jsonl) as fh:
+def _resolve_metrics_path(run_dir: Path, explicit: str | None) -> Path:
+    if explicit is not None:
+        p = Path(explicit)
+        if not p.is_file():
+            raise FileNotFoundError(f"Not a file: {p}")
+        return p
+    for name in ("metrics.jsonl", "metric.jsonl"):
+        candidate = run_dir / name
+        if candidate.is_file():
+            return candidate
+    listing = sorted(p.name for p in run_dir.iterdir()) if run_dir.is_dir() else []
+    raise FileNotFoundError(
+        f"No metrics.jsonl (or metric.jsonl) in {run_dir}. "
+        f"Contents: {listing or '(missing or not a directory)'}."
+    )
+
+
+def _load_metrics(metrics_path: Path) -> list[dict]:
+    with open(metrics_path) as fh:
         return [json.loads(line) for line in fh if line.strip()]
 
 
 def main() -> None:
     args     = parse_args()
     run_dir  = Path(args.run_dir)
-    records  = _load_metrics(run_dir)
+    metrics_path = _resolve_metrics_path(run_dir, args.metrics_jsonl)
+    records  = _load_metrics(metrics_path)
     if not records:
-        raise SystemExit(f"metrics.jsonl in {run_dir} is empty — nothing to plot")
+        raise SystemExit(f"{metrics_path} is empty — nothing to plot")
 
     epochs     = [r["epoch"]      for r in records]
     train_loss = [r["train_loss"] for r in records]
