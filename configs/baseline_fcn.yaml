@@ -10,6 +10,7 @@ arch: fcn_resnet50
 image_size: 256
 batch_size: 8           # ResNet50 is ~4x the UNet param count; keep VRAM sane on 1060
 epochs: 30
+loss: ce_dice
 lr: 0.0001              # backbone-safe fine-tune rate (vs 1e-3 for UNet-from-scratch)
 grad_clip: 1.0
 lr_schedule: cosine

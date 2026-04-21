@@ -2,6 +2,7 @@
 image_size: 128
 batch_size: 16
 epochs: 25
+loss: ce
 lr: 0.001
 grad_clip: 1.0
 lr_schedule: step

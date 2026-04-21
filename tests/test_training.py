@@ -1,3 +1,4 @@
+import math
 import tempfile
 
 import torch
@@ -8,6 +9,7 @@ from torch.utils.data import DataLoader, TensorDataset
 from unet_pet_seg.config import Config
 from unet_pet_seg.evaluate import evaluate
 from unet_pet_seg.logger import Logger
+from unet_pet_seg.losses import CEDiceLoss, DiceLoss, build_loss
 from unet_pet_seg.model import UNet
 from unet_pet_seg.trainer import Trainer
 from unet_pet_seg.utils.seeding import set_seed
@@ -120,6 +122,32 @@ def test_fit_runs_and_returns_best_miou():
         best_miou = trainer.fit(loader, loader, start_epoch=1, best_miou=0.0)
         logger.close()
     assert 0.0 <= best_miou <= 1.0
+
+
+def test_dice_loss_perfect_prediction_is_zero():
+    """Dice loss should be ~0 when predicted probabilities match ground truth."""
+    loss_fn = DiceLoss(num_classes=_CLASSES)
+    logits  = torch.zeros(2, _CLASSES, 4, 4)
+    targets = torch.zeros(2, 4, 4, dtype=torch.long)
+    logits[:, 0, :, :] = 10.0   # near-certain class 0 prediction → targets are all 0
+    assert loss_fn(logits, targets).item() < 0.05
+
+
+def test_ce_dice_loss_shape_and_range():
+    """CE+Dice loss must return a scalar >= 0."""
+    loss_fn = CEDiceLoss(num_classes=_CLASSES)
+    logits  = torch.randn(2, _CLASSES, _IMG_SIZE, _IMG_SIZE)
+    targets = torch.randint(0, _CLASSES, (2, _IMG_SIZE, _IMG_SIZE))
+    val = loss_fn(logits, targets)
+    assert val.shape == torch.Size([]), "loss must be a scalar"
+    assert val.item() >= 0.0
+
+
+def test_build_loss_dispatch():
+    cfg_ce      = Config(loss="ce",      num_classes=_CLASSES)
+    cfg_cedice  = Config(loss="ce_dice", num_classes=_CLASSES)
+    assert isinstance(build_loss(cfg_ce),     nn.CrossEntropyLoss)
+    assert isinstance(build_loss(cfg_cedice), CEDiceLoss)
 
 
 def test_determinism():

@@ -11,7 +11,6 @@ import typing
 from pathlib import Path
 
 import torch
-import torch.nn as nn
 import yaml
 from torch.cuda.amp import GradScaler
 
@@ -26,6 +25,7 @@ from unet_pet_seg.config import Config
 from unet_pet_seg.dataset import get_dataloaders
 from unet_pet_seg.evaluate import evaluate
 from unet_pet_seg.logger import Logger
+from unet_pet_seg.losses import build_loss
 from unet_pet_seg.trainer import Trainer
 from unet_pet_seg.utils.seeding import set_seed
 
@@ -99,12 +99,12 @@ def main(cfg: Config, out_dir: str, resume: str | None = None) -> None:
     amp_on    = cfg.use_amp and device.type == "cuda"
     print(f"Device    : {device}")
     print(f"Config    : arch={cfg.arch}  size={cfg.image_size}  epochs={cfg.epochs}  lr={cfg.lr}"
-          f"  schedule={cfg.lr_schedule}  amp={amp_on}  grad_clip={cfg.grad_clip}")
+          f"  loss={cfg.loss}  schedule={cfg.lr_schedule}  amp={amp_on}  grad_clip={cfg.grad_clip}")
 
     train_loader, val_loader, test_loader = get_dataloaders(cfg)
 
     model     = build_model(cfg).to(device)
-    loss_fn   = nn.CrossEntropyLoss()
+    loss_fn   = build_loss(cfg)
     optimizer = torch.optim.Adam(model.parameters(), lr=cfg.lr)
     scheduler = build_scheduler(optimizer, cfg)
     scaler    = GradScaler(enabled=amp_on)

@@ -52,10 +52,13 @@ A segmentation repo without pictures is uncheckable. This is the biggest ROI vis
 
 ## Phase 7 — Scope & recipe decisions  `[decision · advisor]`
 Call advisor once before Phase 8 re-train; budget is a GTX 1060.
-- [ ] Final image size (256 vs 384), epochs, aug recipe, loss (CE vs CE+Dice)
-- [ ] Which baseline(s) actually run — pick one, not three
-- [ ] Stretch: ONNX export + latency note, Dockerfile, mixed-precision vs fp32 benchmark table
-- [ ] Framing hook: one paragraph linking dense prediction → robotics perception (free-space / semantic occupancy)
+- [x] Final image size: **256** — 384 forces batch≤4 on 1060 for FCN, ~2.25× cost per step, <1 mIoU gain on this dataset
+- [x] Epochs: **25** for unet_base (CE only, clean ablation), **30** for unet_256_aug and baseline_fcn
+- [x] Aug recipe: leave as-is (hflip, affine, jitter, RandomResizedCrop) — credibility gap was zero aug, not unsophisticated aug
+- [x] Loss: **CE** for unet_base (matches original 0.7422 baseline), **CE+Dice (λ=0.5)** for unet_256_aug and baseline_fcn (boundary class is imbalanced; Dice is expected reviewer signal). `losses.py` implemented and wired via `cfg.loss`.
+- [x] Baseline: **FCN-ResNet50 only** — DeepLabV3 (ASPP+dilated) muddies the UNet comparison without adding clarity
+- [x] Stretch priority: (1) ONNX export + latency ms/img on 1060 — highest signal for Nvidia/Wayve/Isaac; (2) AMP vs fp32 throughput table — near-free; (3) Dockerfile — skip (low ML-portfolio value)
+- [x] Framing hook (stashed for Phase 9 README): *Dense per-pixel classification is the same computational primitive behind free-space segmentation, semantic occupancy grids, and driveable-surface maps in AV and robot stacks. Oxford-IIIT Pet is a controlled dataset for a topology — encoder/decoder with skip connections — that ships in production perception pipelines. The boundary class makes label imbalance explicit, surfacing the same tradeoffs (Dice vs CE, augmentation, pretrained backbones) that appear in every real deployment.*
 
 ## Phase 8 — Re-train & measure  `[mechanical · sonnet]` *(separate budget: ~4–8h wall)*
 Do not fold into Phase 4. Own phase so the time cost is visible.

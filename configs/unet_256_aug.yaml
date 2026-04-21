@@ -2,6 +2,7 @@
 image_size: 256
 batch_size: 16
 epochs: 30
+loss: ce_dice
 lr: 0.001
 grad_clip: 1.0
 lr_schedule: cosine

@@ -12,6 +12,9 @@ class Config:
     # Model — one of "unet", "fcn_resnet50", "deeplabv3_resnet50"
     arch: str = "unet"
 
+    # Loss — "ce" (cross-entropy only) or "ce_dice" (CE + 0.5 * Dice)
+    loss: str = "ce"
+
     # Training
     batch_size: int = 16
     num_workers: int = 4
