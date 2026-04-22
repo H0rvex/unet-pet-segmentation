@@ -15,15 +15,15 @@ class _FakePetData:
     """Minimal stand-in for OxfordIIITPet — no download required."""
 
     def __init__(self, n: int = 8, size: tuple[int, int] = (60, 80)) -> None:
-        self._n    = n
+        self._n = n
         self._size = size  # (H, W)
 
     def __len__(self) -> int:
         return self._n
 
     def __getitem__(self, idx: int) -> tuple[Image.Image, Image.Image]:
-        rng      = np.random.default_rng(idx)
-        img_arr  = rng.integers(0, 255, (*self._size, 3), dtype=np.uint8)
+        rng = np.random.default_rng(idx)
+        img_arr = rng.integers(0, 255, (*self._size, 3), dtype=np.uint8)
         mask_arr = rng.choice([1, 2, 3], size=self._size).astype(np.uint8)
         return Image.fromarray(img_arr), Image.fromarray(mask_arr, mode="L")
 
@@ -102,12 +102,12 @@ def test_aug_mask_labels_stay_valid():
 
 
 def test_dataloader_batch_shapes():
-    ds     = _make_dataset()
+    ds = _make_dataset()
     loader = DataLoader(ds, batch_size=4)
     imgs, masks = next(iter(loader))
-    assert imgs.shape  == (4, 3, 64, 64)
+    assert imgs.shape == (4, 3, 64, 64)
     assert masks.shape == (4, 64, 64)
-    assert imgs.dtype  == torch.float32
+    assert imgs.dtype == torch.float32
     assert masks.dtype == torch.int64
 
 
@@ -119,7 +119,7 @@ def test_real_dataset_label_range():
     from torchvision.datasets import OxfordIIITPet
 
     raw = OxfordIIITPet(root="./data", split="test", target_types="segmentation", download=False)
-    ds  = PetSegDataset(raw, image_size=128)
+    ds = PetSegDataset(raw, image_size=128)
     for i in range(0, min(len(ds), 50), 5):
         _, mask = ds[i]
         assert mask.min() >= 0 and mask.max() <= 2

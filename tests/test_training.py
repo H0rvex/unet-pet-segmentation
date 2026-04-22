@@ -14,10 +14,10 @@ from unet_pet_seg.model import UNet
 from unet_pet_seg.trainer import Trainer
 from unet_pet_seg.utils.seeding import set_seed
 
-_IMG_SIZE = 32   # small spatial size keeps tests fast on CPU
-_N        = 32
-_BATCH    = 32   # single batch so loss decrease is reliable
-_CLASSES  = 3
+_IMG_SIZE = 32  # small spatial size keeps tests fast on CPU
+_N = 32
+_BATCH = 32  # single batch so loss decrease is reliable
+_CLASSES = 3
 
 
 def _make_loader(seed: int = 0) -> DataLoader:
@@ -29,20 +29,26 @@ def _make_loader(seed: int = 0) -> DataLoader:
 
 def _build_trainer(tmp_path: str, seed: int = 42) -> tuple[Trainer, Logger]:
     set_seed(seed)
-    device    = torch.device("cpu")
-    cfg       = Config(
-        image_size=_IMG_SIZE, num_classes=_CLASSES,
-        epochs=2, lr=1e-2,
-        use_amp=False, grad_clip=1.0, log_pred_every=1,
-        lr_schedule="step", scheduler_step_size=10, scheduler_gamma=0.1,
+    device = torch.device("cpu")
+    cfg = Config(
+        image_size=_IMG_SIZE,
+        num_classes=_CLASSES,
+        epochs=2,
+        lr=1e-2,
+        use_amp=False,
+        grad_clip=1.0,
+        log_pred_every=1,
+        lr_schedule="step",
+        scheduler_step_size=10,
+        scheduler_gamma=0.1,
     )
-    model     = UNet(num_classes=_CLASSES).to(device)
-    loss_fn   = nn.CrossEntropyLoss()
+    model = UNet(num_classes=_CLASSES).to(device)
+    loss_fn = nn.CrossEntropyLoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=cfg.lr)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
-    scaler    = GradScaler(enabled=False)
-    logger    = Logger(tmp_path)
-    trainer   = Trainer(model, loss_fn, optimizer, scheduler, scaler, cfg, device, logger, tmp_path)
+    scaler = GradScaler(enabled=False)
+    logger = Logger(tmp_path)
+    trainer = Trainer(model, loss_fn, optimizer, scheduler, scaler, cfg, device, logger, tmp_path)
     return trainer, logger
 
 
@@ -70,7 +76,7 @@ def test_initial_loss_near_log_num_classes():
 
 
 def test_evaluate_returns_miou_in_range():
-    model  = UNet(num_classes=_CLASSES)
+    model = UNet(num_classes=_CLASSES)
     device = torch.device("cpu")
     loader = _make_loader()
     iou, miou = evaluate(model, loader, device, _CLASSES)
@@ -125,16 +131,16 @@ def test_fit_runs_and_returns_best_miou():
 def test_dice_loss_perfect_prediction_is_zero():
     """Dice loss should be ~0 when predicted probabilities match ground truth."""
     loss_fn = DiceLoss(num_classes=_CLASSES)
-    logits  = torch.zeros(2, _CLASSES, 4, 4)
+    logits = torch.zeros(2, _CLASSES, 4, 4)
     targets = torch.zeros(2, 4, 4, dtype=torch.long)
-    logits[:, 0, :, :] = 10.0   # near-certain class 0 prediction → targets are all 0
+    logits[:, 0, :, :] = 10.0  # near-certain class 0 prediction → targets are all 0
     assert loss_fn(logits, targets).item() < 0.05
 
 
 def test_ce_dice_loss_shape_and_range():
     """CE+Dice loss must return a scalar >= 0."""
     loss_fn = CEDiceLoss(num_classes=_CLASSES)
-    logits  = torch.randn(2, _CLASSES, _IMG_SIZE, _IMG_SIZE)
+    logits = torch.randn(2, _CLASSES, _IMG_SIZE, _IMG_SIZE)
     targets = torch.randint(0, _CLASSES, (2, _IMG_SIZE, _IMG_SIZE))
     val = loss_fn(logits, targets)
     assert val.shape == torch.Size([]), "loss must be a scalar"
@@ -142,14 +148,15 @@ def test_ce_dice_loss_shape_and_range():
 
 
 def test_build_loss_dispatch():
-    cfg_ce      = Config(loss="ce",      num_classes=_CLASSES)
-    cfg_cedice  = Config(loss="ce_dice", num_classes=_CLASSES)
-    assert isinstance(build_loss(cfg_ce),     nn.CrossEntropyLoss)
+    cfg_ce = Config(loss="ce", num_classes=_CLASSES)
+    cfg_cedice = Config(loss="ce_dice", num_classes=_CLASSES)
+    assert isinstance(build_loss(cfg_ce), nn.CrossEntropyLoss)
     assert isinstance(build_loss(cfg_cedice), CEDiceLoss)
 
 
 def test_determinism():
     """Same seed must produce bit-exact loss on two independent runs."""
+
     def one_run() -> float:
         with tempfile.TemporaryDirectory() as tmp:
             trainer, logger = _build_trainer(tmp, seed=42)

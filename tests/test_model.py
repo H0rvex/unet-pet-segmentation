@@ -9,13 +9,13 @@ def test_encoder_block_output_shapes():
     block = EncoderBlock(3, 64)
     x = torch.randn(2, 3, 128, 128)
     skip, pooled = block(x)
-    assert skip.shape   == (2, 64, 128, 128)
-    assert pooled.shape == (2, 64,  64,  64)
+    assert skip.shape == (2, 64, 128, 128)
+    assert pooled.shape == (2, 64, 64, 64)
 
 
 def test_decoder_block_output_shape():
     block = DecoderBlock(512, 256)
-    x    = torch.randn(2, 512, 16, 16)
+    x = torch.randn(2, 512, 16, 16)
     skip = torch.randn(2, 256, 32, 32)
     assert block(x, skip).shape == (2, 256, 32, 32)
 
@@ -52,7 +52,7 @@ def test_param_count():
 def test_gradient_flows_to_all_parameters():
     model = UNet(num_classes=3)
     model.train()
-    x    = torch.randn(2, 3, 128, 128)
+    x = torch.randn(2, 3, 128, 128)
     loss = model(x).sum()
     loss.backward()
     no_grad = [n for n, p in model.named_parameters() if p.grad is None]
