@@ -1,5 +1,7 @@
 {
   "include": ["src", "scripts"],
+  "typeCheckingMode": "basic",
+  "pythonVersion": "3.10",
   "executionEnvironments": [
     {
       "root": ".",
@@ -7,4 +9,3 @@
     }
   ]
 }
-

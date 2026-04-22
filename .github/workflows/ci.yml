@@ -27,8 +27,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install -e ".[dev]"
 
-      - name: Lint
+      - name: Ruff lint
         run: ruff check .
 
-      - name: Tests
-        run: pytest -q
+      - name: Ruff format
+        run: ruff format --check .
+
+      - name: Pyright
+        run: pyright
+
+      - name: Tests with coverage
+        run: pytest -q --cov=unet_pet_seg --cov-report=term-missing
