@@ -4,15 +4,40 @@ import dataclasses
 import os
 import typing
 from contextlib import nullcontext
+from typing import Protocol, cast
 
 import torch
 import torch.nn as nn
 from torch.cuda.amp import GradScaler, autocast
 from torch.utils.data import DataLoader
 
+from unet_pet_seg.checkpoint import expect_model_state, load_checkpoint, normalize_ddp_state_dict
 from unet_pet_seg.config import Config
 from unet_pet_seg.evaluate import evaluate
-from unet_pet_seg.logger import Logger
+
+
+class TrainingLogger(Protocol):
+    def log_metrics(
+        self,
+        epoch: int,
+        total_epochs: int,
+        train_loss: float,
+        val_miou: float,
+        per_class_iou: torch.Tensor,
+        lr: float,
+        grad_norm: float,
+    ) -> None: ...
+
+    def log_pred_grid(
+        self,
+        epoch: int,
+        images: torch.Tensor,
+        masks: torch.Tensor,
+        preds: torch.Tensor,
+        n: int = 4,
+    ) -> None: ...
+
+    def close(self) -> None: ...
 
 
 class Trainer:
@@ -25,18 +50,18 @@ class Trainer:
         scaler: GradScaler,
         cfg: Config,
         device: torch.device,
-        logger: Logger,
+        logger: TrainingLogger,
         run_dir: str,
     ) -> None:
-        self.model     = model
-        self.loss_fn   = loss_fn
+        self.model = model
+        self.loss_fn = loss_fn
         self.optimizer = optimizer
         self.scheduler = scheduler
-        self.scaler    = scaler
-        self.cfg       = cfg
-        self.device    = device
-        self.logger    = logger
-        self.run_dir   = run_dir
+        self.scaler = scaler
+        self.cfg = cfg
+        self.device = device
+        self.logger = logger
+        self.run_dir = run_dir
 
     # ------------------------------------------------------------------
     # Public interface
@@ -62,12 +87,12 @@ class Trainer:
         if is_main:
             sample_images, sample_masks = next(iter(val_loader))
             sample_images = sample_images[:4].to(self.device)
-            sample_masks  = sample_masks[:4].to(self.device)
+            sample_masks = sample_masks[:4].to(self.device)
 
         for epoch in range(start_epoch, self.cfg.epochs + 1):
             # DDP shuffles need epoch to be set so each rank sees a different order.
             if hasattr(train_loader.sampler, "set_epoch"):
-                typing.cast(typing.Any, train_loader.sampler).set_epoch(epoch)
+                cast(typing.Any, train_loader.sampler).set_epoch(epoch)
 
             train_loss, grad_norm = self._train_epoch(train_loader)
             self.scheduler.step()
@@ -78,8 +103,13 @@ class Trainer:
             lr_now = self.optimizer.param_groups[0]["lr"]
             if is_main:
                 self.logger.log_metrics(
-                    epoch, self.cfg.epochs, train_loss, val_miou,
-                    per_class_iou, lr_now, grad_norm,
+                    epoch,
+                    self.cfg.epochs,
+                    train_loss,
+                    val_miou,
+                    per_class_iou,
+                    lr_now,
+                    grad_norm,
                 )
 
             if is_main and epoch % self.cfg.log_pred_every == 0 and sample_images is not None:
@@ -97,26 +127,25 @@ class Trainer:
         return best_miou
 
     def save_checkpoint(self, path: str, epoch: int, best_miou: float) -> None:
-        model = typing.cast(nn.Module, getattr(self.model, "module", self.model))
-        torch.save({
-            "epoch":     epoch,
-            "model":     model.state_dict(),
-            "optimizer": self.optimizer.state_dict(),
-            "scheduler": self.scheduler.state_dict(),
-            "scaler":    self.scaler.state_dict(),
-            "best_miou": best_miou,
-            "config":    dataclasses.asdict(self.cfg),
-        }, path)
+        model = cast(nn.Module, getattr(self.model, "module", self.model))
+        torch.save(
+            {
+                "epoch": epoch,
+                "model": model.state_dict(),
+                "optimizer": self.optimizer.state_dict(),
+                "scheduler": self.scheduler.state_dict(),
+                "scaler": self.scaler.state_dict(),
+                "best_miou": best_miou,
+                "config": dataclasses.asdict(self.cfg),
+            },
+            path,
+        )
 
     def load_checkpoint(self, path: str) -> tuple[int, float]:
         """Restore all state. Returns (start_epoch, best_miou)."""
-        ckpt = torch.load(path, map_location=self.device, weights_only=False)
-        model_state = ckpt["model"]
-        target = typing.cast(nn.Module, getattr(self.model, "module", self.model))
-        # Allow loading a DDP-saved checkpoint into a non-DDP model.
-        if any(k.startswith("module.") for k in model_state.keys()):
-            model_state = {k.removeprefix("module."): v for k, v in model_state.items()}
-        target.load_state_dict(model_state)
+        ckpt = load_checkpoint(path, map_location=self.device, full_training_state=True)
+        target = cast(nn.Module, getattr(self.model, "module", self.model))
+        target.load_state_dict(normalize_ddp_state_dict(expect_model_state(ckpt)))
         self.optimizer.load_state_dict(ckpt["optimizer"])
         self.scheduler.load_state_dict(ckpt["scheduler"])
         if "scaler" in ckpt:
@@ -141,7 +170,7 @@ class Trainer:
 
         for images, masks in loader:
             images = images.to(self.device, non_blocking=True)
-            masks  = masks.to(self.device, non_blocking=True)
+            masks = masks.to(self.device, non_blocking=True)
             self.optimizer.zero_grad(set_to_none=True)
 
             amp_cm = autocast(enabled=True, dtype=torch.float16) if use_amp else nullcontext()
@@ -157,9 +186,7 @@ class Trainer:
             if use_amp:
                 self.scaler.unscale_(self.optimizer)
             max_norm = self.cfg.grad_clip if self.cfg.grad_clip > 0 else float("inf")
-            total_norm += torch.nn.utils.clip_grad_norm_(
-                self.model.parameters(), max_norm
-            ).item()
+            total_norm += torch.nn.utils.clip_grad_norm_(self.model.parameters(), max_norm).item()
             if use_amp:
                 self.scaler.step(self.optimizer)
                 self.scaler.update()

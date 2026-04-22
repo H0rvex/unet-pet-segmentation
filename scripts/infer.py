@@ -1,4 +1,4 @@
-"""Evaluate a trained U-Net checkpoint (thin wrapper)."""
+"""Batch inference on images (thin wrapper)."""
 
 # ruff: noqa: E402
 
@@ -12,7 +12,7 @@ _SRC_DIR = (_REPO_ROOT / "src").resolve()
 if _SRC_DIR.is_dir() and str(_SRC_DIR) not in sys.path:
     sys.path.insert(0, str(_SRC_DIR))
 
-from unet_pet_seg.cli.evaluate import main_cli
+from unet_pet_seg.cli.infer import main_cli
 
 if __name__ == "__main__":
     main_cli()
