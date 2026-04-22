@@ -75,6 +75,26 @@ Common: Adam, lr=1e-3 (UNet) / 1e-4 (FCN fine-tune to keep the pretrained backbo
 - **Headline table reports validation mIoU** (best val checkpoint). Test-split metrics are still tracked and written to `runs/<ts>/test_metrics.json`.
 - **Non-determinism is documented, not eliminated**: seeding + `cudnn.deterministic`, but GPU ops retain residual non-determinism. Variance across seeds is not characterized — single-run numbers.
 
+## Python, PyTorch, and CUDA
+
+| Your stack | Suggested install |
+| ---------- | ----------------- |
+| CUDA 12.x (local GPU) | Install a matching `torch` / `torchvision` wheel from [pytorch.org/get-started/locally](https://pytorch.org/get-started/locally/), then `pip install -e ".[dev]"`. |
+| CPU only | `pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu` then `pip install -e ".[dev]"`. |
+
+`pyproject.toml` pins **lower bounds** on `torch` / `torchvision`; CI uses those defaults from PyPI and does not bind a specific driver version. For a frozen stack, copy pins into [`requirements-export.txt`](requirements-export.txt) or record `pip freeze` from a known-good machine.
+
+## Checkpoints: on-disk format and trust
+
+Training writes `best.pth` / `last.pth` as a dict with keys `epoch`, `model` (state dict), `optimizer`, `scheduler`, `scaler`, `best_miou`, and `config` (resolved hyperparameters as a plain dict). **Treat checkpoints like executable code:** only load files you trust. Evaluation and inference entrypoints try `torch.load(..., weights_only=True)` first and fall back to full unpickling only on known safe-load failures (`pickle.UnpicklingError` or typical `RuntimeError` from restricted unpickling), with a warning for legacy pickles. **DDP:** checkpoints saved with `DistributedDataParallel` use `module.*` keys; `load_model_weights` (used by eval, infer, ONNX, bench, viz) strips that prefix so the same file loads on a single GPU or CPU.
+
+## ONNX export and TensorRT
+
+[`scripts/export_onnx.py`](scripts/export_onnx.py) traces the model with a dummy tensor of shape `(N, 3, H, W)`, default **ONNX opset 17**, I/O names `input` / `logits`, and **dynamic batch on `N`** unless you pass `--no-dynamic-batch`. Compare PyTorch vs ONNX Runtime latency, for example:
+`python scripts/benchmark.py --checkpoint runs/<ts>/best.pth --onnx artifacts/onnx/<your_export>.onnx`.
+
+A common NVIDIA follow-up is TensorRT: build an engine from the exported ONNX, e.g. with `trtexec --onnx=artifacts/onnx/your_model.onnx` on a host that has the TensorRT SDK — this repository stops at ONNX + ORT to stay portable.
+
 ## Reproduce
 
 ```bash
@@ -83,6 +103,10 @@ make install
 
 # Optional deployment/runtime extras (ONNX + ONNX Runtime)
 pip install -e ".[deploy]"
+
+# Same workflows via console scripts (after install)
+unet-pet-train --config configs/unet_base.yaml
+unet-pet-eval --checkpoint runs/<ts>/best.pth
 
 # Train the three configs (Oxford-IIIT Pet downloads on first run, ~800 MB)
 make train          # UNet-128 baseline (matches prior 0.7422)
@@ -99,6 +123,10 @@ make eval CHECKPOINT=runs/<ts>/best.pth
 # Qualitative grid → artifacts/preds/sample_*.png
 make viz CHECKPOINT=runs/<ts>/best.pth
 
+# Deployment-style inference on your own images (mask + overlay PNGs + latency)
+make infer CHECKPOINT=runs/<ts>/best.pth INPUT=/path/to/image_or_folder
+# or: unet-pet-infer --checkpoint runs/<ts>/best.pth --input /path/to/image_or_folder
+
 # Training curves → artifacts/curves.png
 make curves RUN_DIR=runs/<ts>
 
@@ -108,10 +136,13 @@ make export-onnx CHECKPOINT=runs/<ts>/best.pth
 # Benchmark inference and persist metrics to artifacts/benchmarks/*.json
 make bench CHECKPOINT=runs/<ts>/best.pth
 
+# CPU Docker image: build, install CPU torch, run pytest inside the image
+docker build -t unet-pet-seg:cpu .
+
 # Tests (model shapes, dataset invariants, one-batch overfit smoke test)
 make test
 
-# Local CI equivalent (lint + tests)
+# Local CI equivalent (ruff lint + format check + pyright + tests with coverage)
 make ci
 ```
 
@@ -121,6 +152,9 @@ Canonical machine-readable outputs:
 - `runs/<ts>/test_metrics.json` (final test metrics for a checkpoint)
 - `artifacts/benchmarks/*.json` (latency/throughput runs)
 - `artifacts/onnx/*.onnx` (exported inference graphs)
+- `artifacts/infer/` (default output root for `unet-pet-infer` / `make infer`)
+
+Developer setup and CI parity: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Why this matters for perception work
 

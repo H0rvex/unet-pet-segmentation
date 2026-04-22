@@ -12,7 +12,7 @@
 Move flat files into the sibling's layout so the repo reads as a package, not a script dump.
 - [x] Create `src/unet_pet_seg/{__init__,model,dataset,trainer,evaluator,logger,config}.py`
 - [x] Move `train.py` / `evaluate.py` → `scripts/`; update imports
-- [x] Add `pyproject.toml` (package, pinned deps, entry points), pin `requirements.txt`
+- [x] Add `pyproject.toml` (package, lower-bounded deps, `[project.scripts]` entry points); optional pin list in `requirements-export.txt`
 - [x] Add `Makefile` (`install`, `train`, `eval`, `test`, `lint`, `viz`)
 - [x] `.gitignore`: `data/`, `runs/`, `artifacts/`, `*.pth`
 
@@ -48,7 +48,7 @@ A segmentation repo without pictures is uncheckable. This is the biggest ROI vis
 - [x] Parse metrics.jsonl → `artifacts/curves.png` (loss + val mIoU + per-class IoU) *(scripts/plot_curves.py; JSONL is cheaper than parsing TB event files)*
 - [x] Baseline infra: `TVAdapter` around `fcn_resnet50` + `configs/baseline_fcn.yaml` (backbone-only pretrain, lr=1e-4 fine-tune) — `cfg.arch` dispatch via `build_model`
 - [x] `.gitignore` now allows `artifacts/*.png` and `artifacts/preds/*` (keeps `*.pth` excluded); Makefile gains `viz`, `curves`, `baseline` targets
-- [ ] Actual baseline/unet training + commit of PNGs — deferred to Phase 8 (no checkpoints exist yet); README reference deferred to Phase 9
+- [x] Actual baseline/unet training + commit of PNGs — completed in Phase 8 / README
 
 ## Phase 7 — Scope & recipe decisions  `[decision · advisor]`
 Call advisor once before Phase 8 re-train; budget is a GTX 1060.
@@ -57,7 +57,7 @@ Call advisor once before Phase 8 re-train; budget is a GTX 1060.
 - [x] Aug recipe: leave as-is (hflip, affine, jitter, RandomResizedCrop) — credibility gap was zero aug, not unsophisticated aug
 - [x] Loss: **CE** for unet_base (matches original 0.7422 baseline), **CE+Dice (λ=0.5)** for unet_256_aug and baseline_fcn (boundary class is imbalanced; Dice is expected reviewer signal). `losses.py` implemented and wired via `cfg.loss`.
 - [x] Baseline: **FCN-ResNet50 only** — DeepLabV3 (ASPP+dilated) muddies the UNet comparison without adding clarity
-- [x] Stretch priority: (1) ONNX export + latency ms/img on 1060 — highest signal for Nvidia/Wayve/Isaac; (2) AMP vs fp32 throughput table — near-free; (3) Dockerfile — skip (low ML-portfolio value)
+- [x] Stretch priority: (1) ONNX export + latency ms/img on 1060 — highest signal for Nvidia/Wayve/Isaac; (2) AMP vs fp32 throughput table — near-free; (3) Dockerfile — optional CPU `Dockerfile` + `.dockerignore` for clone-and-test
 - [x] Framing hook (stashed for Phase 9 README): *Dense per-pixel classification is the same computational primitive behind free-space segmentation, semantic occupancy grids, and driveable-surface maps in AV and robot stacks. Oxford-IIIT Pet is a controlled dataset for a topology — encoder/decoder with skip connections — that ships in production perception pipelines. The boundary class makes label imbalance explicit, surfacing the same tradeoffs (Dice vs CE, augmentation, pretrained backbones) that appear in every real deployment.*
 
 ## Phase 8 — Re-train & measure  `[mechanical · sonnet]` *(separate budget: ~4–8h wall)*
