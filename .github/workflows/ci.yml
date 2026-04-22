@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - main
-      - unet-refactor
   pull_request:
 
 jobs:
