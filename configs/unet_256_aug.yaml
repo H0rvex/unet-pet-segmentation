@@ -1,0 +1,13 @@
+# Target config — 256px, augmentation, cosine LR with warmup, AMP.
+image_size: 256
+batch_size: 16
+epochs: 30
+loss: ce_dice
+lr: 0.001
+grad_clip: 1.0
+lr_schedule: cosine
+warmup_epochs: 3
+use_aug: true
+use_amp: true
+seed: 42
+log_pred_every: 5

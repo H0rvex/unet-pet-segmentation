@@ -1,0 +1,12 @@
+# Optional: pin a known-good stack for reproducibility.
+# Generate from your working env, then install with:
+#   pip install -r requirements-export.txt && pip install -e ".[dev]"
+#
+# Example (edit versions to match your CUDA build from https://pytorch.org/get-started/locally/):
+# torch==2.7.0+cu128
+# torchvision==0.22.0+cu128
+#
+# For CPU-only wheels from the PyTorch index:
+# pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+#
+# This file is intentionally not used by CI; CI installs lower bounds from pyproject.toml.

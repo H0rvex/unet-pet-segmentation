@@ -1,0 +1,56 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "unet-pet-segmentation"
+version = "0.1.0"
+description = "U-Net semantic segmentation on Oxford-IIIT Pet with reproducible training, ONNX export, and benchmarks."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+dependencies = [
+    "torch>=2.7.0",
+    "torchvision>=0.22.0",
+    "numpy",
+    "pillow",
+    "pyyaml",
+    "tensorboard",
+    "matplotlib",
+]
+
+[project.scripts]
+unet-pet-train = "unet_pet_seg.cli.train:main_cli"
+unet-pet-eval = "unet_pet_seg.cli.evaluate:main_cli"
+unet-pet-viz = "unet_pet_seg.cli.visualize:main_cli"
+unet-pet-export-onnx = "unet_pet_seg.cli.export_onnx:main_cli"
+unet-pet-bench = "unet_pet_seg.cli.benchmark:main_cli"
+unet-pet-infer = "unet_pet_seg.cli.infer:main_cli"
+
+[project.optional-dependencies]
+dev = ["pytest", "pytest-cov", "ruff", "pyright"]
+deploy = ["onnx>=1.16.0", "onnxruntime>=1.18.0"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/unet_pet_seg"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.coverage.run]
+branch = true
+source = ["unet_pet_seg"]
+omit = ["unet_pet_seg/cli/*"]
+
+[tool.coverage.report]
+fail_under = 50
+show_missing = true
+skip_covered = true

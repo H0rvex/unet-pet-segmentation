@@ -1,7 +1,9 @@
-unet.pth
 data/
+runs/
 __pycache__/
 *.pyc
+*.egg-info/
 .vscode/
-
-
+.pytest_cache/
+.ruff_cache/
+.venv/
