@@ -4,7 +4,9 @@ from torch.utils.data import DataLoader
 
 
 @torch.no_grad()
-def evaluate(model: nn.Module, loader: DataLoader, device: torch.device, num_classes: int) -> tuple[torch.Tensor, float]:
+def evaluate(
+    model: nn.Module, loader: DataLoader, device: torch.device, num_classes: int
+) -> tuple[torch.Tensor, float]:
     """Return (per-class IoU tensor, mean IoU) over the given loader."""
     model.eval()
     TP = torch.zeros(num_classes, device=device)
@@ -25,6 +27,6 @@ def evaluate(model: nn.Module, loader: DataLoader, device: torch.device, num_cla
         torch.distributed.all_reduce(FP, op=torch.distributed.ReduceOp.SUM)
         torch.distributed.all_reduce(FN, op=torch.distributed.ReduceOp.SUM)
 
-    iou  = TP / (TP + FP + FN + 1e-8)
+    iou = TP / (TP + FP + FN + 1e-8)
     miou = iou.mean().item()
     return iou.detach().cpu(), miou

@@ -15,7 +15,7 @@ from unet_pet_seg.config import Config
 from unet_pet_seg.model import UNet
 
 _TV_FACTORIES = {
-    "fcn_resnet50":       fcn_resnet50,
+    "fcn_resnet50": fcn_resnet50,
     "deeplabv3_resnet50": deeplabv3_resnet50,
 }
 

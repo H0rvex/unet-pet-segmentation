@@ -6,16 +6,19 @@ import numpy as np
 import torch
 
 # Per-class colours for mask visualisation (foreground, background, boundary).
-MASK_COLORS = np.array([
-    [ 64, 170,  64],   # foreground — green
-    [ 30,  30,  30],   # background — near-black
-    [220,  60,  60],   # boundary   — red
-], dtype=np.uint8)
+MASK_COLORS = np.array(
+    [
+        [64, 170, 64],  # foreground — green
+        [30, 30, 30],  # background — near-black
+        [220, 60, 60],  # boundary   — red
+    ],
+    dtype=np.uint8,
+)
 
 CLASS_NAMES = ["foreground", "background", "boundary"]
 
 _IMG_MEAN = np.array([0.485, 0.456, 0.406])
-_IMG_STD  = np.array([0.229, 0.224, 0.225])
+_IMG_STD = np.array([0.229, 0.224, 0.225])
 
 
 def unnormalize(img: torch.Tensor) -> np.ndarray:

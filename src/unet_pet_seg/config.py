@@ -24,9 +24,9 @@ class Config:
 
     # LR schedule: "cosine" (with optional linear warmup) or "step"
     lr_schedule: str = "cosine"
-    warmup_epochs: int = 3      # linear warmup before cosine; ignored for "step"
+    warmup_epochs: int = 3  # linear warmup before cosine; ignored for "step"
     scheduler_step_size: int = 10  # used only when lr_schedule="step"
-    scheduler_gamma: float = 0.1   # used only when lr_schedule="step"
+    scheduler_gamma: float = 0.1  # used only when lr_schedule="step"
 
     # Augmentation (training set only; val/test never augmented)
     use_aug: bool = False

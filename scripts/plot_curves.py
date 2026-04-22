@@ -25,18 +25,31 @@ from unet_pet_seg.viz import CLASS_NAMES
 
 def parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Plot training curves from a run's metrics.jsonl")
-    p.add_argument("--run-dir", required=True, metavar="DIR",
-                   help="Run directory containing metrics.jsonl (e.g. runs/20260421_120000)")
+    p.add_argument(
+        "--run-dir",
+        required=True,
+        metavar="DIR",
+        help="Run directory containing metrics.jsonl (e.g. runs/20260421_120000)",
+    )
     p.add_argument(
         "--metrics-jsonl",
         default=None,
         metavar="PATH",
         help="Explicit path to metrics JSONL (overrides default metrics.jsonl inside --run-dir)",
     )
-    p.add_argument("--out", type=str, default="artifacts/curves.png", metavar="PATH",
-                   help="Output PNG path (default: artifacts/curves.png)")
-    p.add_argument("--title", type=str, default=None,
-                   help="Optional suptitle — defaults to the run-dir basename")
+    p.add_argument(
+        "--out",
+        type=str,
+        default="artifacts/curves.png",
+        metavar="PATH",
+        help="Output PNG path (default: artifacts/curves.png)",
+    )
+    p.add_argument(
+        "--title",
+        type=str,
+        default=None,
+        help="Optional suptitle — defaults to the run-dir basename",
+    )
     return p.parse_args()
 
 
@@ -63,16 +76,16 @@ def _load_metrics(metrics_path: Path) -> list[dict]:
 
 
 def main() -> None:
-    args     = parse_args()
-    run_dir  = Path(args.run_dir)
+    args = parse_args()
+    run_dir = Path(args.run_dir)
     metrics_path = _resolve_metrics_path(run_dir, args.metrics_jsonl)
-    records  = _load_metrics(metrics_path)
+    records = _load_metrics(metrics_path)
     if not records:
         raise SystemExit(f"{metrics_path} is empty — nothing to plot")
 
-    epochs     = [r["epoch"]      for r in records]
+    epochs = [r["epoch"] for r in records]
     train_loss = [r["train_loss"] for r in records]
-    val_miou   = [r["val_miou"]   for r in records]
+    val_miou = [r["val_miou"] for r in records]
 
     fig, axes = plt.subplots(1, 3, figsize=(14, 4))
 
